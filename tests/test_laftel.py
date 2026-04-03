@@ -36,6 +36,8 @@ def _make_service(**overrides):
         svc.bot = MagicMock()
         svc._schedule_cache = None
         svc._last_fetch_time = None
+        svc._ranking_cache = {}
+        svc._ranking_fetch_time = {}
         for k, v in overrides.items():
             setattr(svc, k, v)
         return svc
@@ -269,3 +271,135 @@ class TestHandleLaftelCallback:
         args = svc.bot.send_message.call_args
         assert args[0][0] == 123
         assert args[0][1] == strings.laftel_portal_msg
+
+    def test_menu_ranking_shows_weekly(self):
+        svc = _make_service()
+        svc._get_ranking = MagicMock(return_value="주간 랭킹")
+
+        call = MagicMock()
+        call.data = "laftel_menu:ranking"
+        call.message.chat.id = 1
+        call.message.message_id = 1
+
+        svc.handle_laftel_callback(call)
+
+        svc._get_ranking.assert_called_once_with("week")
+        svc.bot.edit_message_text.assert_called_once()
+        assert svc.bot.edit_message_text.call_args[1]["reply_markup"] is not None
+
+    def test_ranking_type_shows_formatted_text(self):
+        cache = {
+            "quarter": [
+                LaftelAnime(id=1, name="테스트 애니", genres=["액션"], content_rating="15세 이용가"),
+            ]
+        }
+        svc = _make_service(_ranking_cache=cache, _ranking_fetch_time={"quarter": datetime.datetime.now()})
+
+        call = MagicMock()
+        call.data = "laftel_ranking:quarter"
+        call.message.chat.id = 1
+        call.message.message_id = 1
+
+        svc.handle_laftel_callback(call)
+
+        args = svc.bot.edit_message_text.call_args
+        assert "테스트 애니" in args[0][0]
+        assert "1." in args[0][0]
+
+
+class TestFetchRanking:
+    @patch("modules.laftel.requests.get")
+    def test_success(self, mock_get):
+        import json
+
+        sample = [{"id": 1, "name": "테스트", "genres": ["액션"], "content_rating": "15세 이용가"}]
+        response = MagicMock()
+        response.content = json.dumps(sample).encode()
+        mock_get.return_value = response
+
+        svc = _make_service()
+        svc._fetch_ranking("week")
+
+        assert "week" in svc._ranking_cache
+        assert len(svc._ranking_cache["week"]) == 1
+        assert svc._ranking_fetch_time["week"] is not None
+
+    @patch("modules.laftel.requests.get")
+    def test_api_failure_sets_empty_list(self, mock_get):
+        mock_get.side_effect = Exception("connection error")
+
+        svc = _make_service()
+        svc._fetch_ranking("week")
+
+        assert svc._ranking_cache["week"] == []
+
+    @patch("modules.laftel.requests.get")
+    def test_stale_cache_preserved_on_error(self, mock_get):
+        mock_get.side_effect = Exception("timeout")
+        old_cache = [LaftelAnime(id=1, name="old")]
+
+        svc = _make_service(
+            _ranking_cache={"week": old_cache},
+            _ranking_fetch_time={"week": datetime.datetime(2020, 1, 1)},
+        )
+        svc._fetch_ranking("week")
+
+        assert svc._ranking_cache["week"] is old_cache
+
+    @patch("modules.laftel.requests.get")
+    def test_cache_not_expired_skips_fetch(self, mock_get):
+        svc = _make_service(
+            _ranking_cache={"week": []},
+            _ranking_fetch_time={"week": datetime.datetime.now() - datetime.timedelta(seconds=100)},
+        )
+        svc._fetch_ranking("week")
+
+        mock_get.assert_not_called()
+
+
+class TestGetRanking:
+    def test_normal_output(self):
+        items = [
+            LaftelAnime(id=1, name="애니A", genres=["액션"], content_rating="15세 이용가", is_laftel_only=True),
+            LaftelAnime(id=2, name="애니B", genres=["로맨스"], content_rating="성인 이용가", is_ending=True),
+        ]
+        svc = _make_service(
+            _ranking_cache={"week": items},
+            _ranking_fetch_time={"week": datetime.datetime.now()},
+        )
+        result = svc._get_ranking("week")
+
+        assert "주간 랭킹" in result
+        assert "1." in result
+        assert "2." in result
+        assert "애니A" in result
+        assert "애니B" in result
+        assert "15+" in result
+        assert "19+" in result
+        assert "독점" in result
+        assert "총 2개" in result
+
+    def test_empty_ranking(self):
+        svc = _make_service(
+            _ranking_cache={"week": []},
+            _ranking_fetch_time={"week": datetime.datetime.now()},
+        )
+        result = svc._get_ranking("week")
+        assert result == strings.laftel_ranking_empty_msg
+
+
+class TestBuildRankingKeyboard:
+    def test_has_all_types(self):
+        keyboard = LaftelService._build_ranking_type_keyboard()
+        buttons = [btn for row in keyboard.keyboard for btn in row]
+        callback_data_set = {btn.callback_data for btn in buttons}
+
+        assert "laftel_ranking:week" in callback_data_set
+        assert "laftel_ranking:quarter" in callback_data_set
+        assert "laftel_ranking:history" in callback_data_set
+        assert len(buttons) == 3
+
+    def test_portal_has_ranking_button(self):
+        keyboard = LaftelService._build_portal_keyboard()
+        buttons = [btn for row in keyboard.keyboard for btn in row]
+        assert any(btn.callback_data == "laftel_menu:ranking" for btn in buttons)
