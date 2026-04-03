@@ -79,14 +79,14 @@ class LaftelAnime(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
     id: int = 0
-    name: str = ""
-    genres: list[str] = []
-    content_rating: str = ""
+    name: str | None = ""
+    genres: list[str] | None = []
+    content_rating: str | None = ""
     distributed_air_time: str | None = ""
-    is_ending: bool = False
-    is_laftel_only: bool = False
-    is_exclusive: bool = False
-    is_dubbed: bool = False
+    is_ending: bool | None = False
+    is_laftel_only: bool | None = False
+    is_exclusive: bool | None = False
+    is_dubbed: bool | None = False
 
 
 class LaftelSearchResponse(BaseModel):

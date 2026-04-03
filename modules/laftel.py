@@ -55,6 +55,38 @@ def _escape_markdown(text):
     return text
 
 
+def _format_entry(item, rank=None):
+    """LaftelAnime 항목을 포맷팅된 엔트리 문자열로 변환한다."""
+    genres = _escape_markdown(", ".join(item.genres or []))
+    rating = RATING_LABELS.get(item.content_rating or "", item.content_rating or "")
+
+    tags = []
+    if item.is_laftel_only or item.is_exclusive:
+        tags.append("[독점]")
+    if item.is_dubbed:
+        tags.append("[더빙]")
+    if item.is_ending:
+        tags.append("[완결]")
+    tags_str = _escape_markdown(" ".join(tags))
+
+    if rank is not None:
+        return strings.laftel_ranking_entry_msg.format(
+            rank=rank,
+            name=_escape_markdown(item.name or ""),
+            genres=genres,
+            rating=rating,
+            tags=tags_str,
+            item_id=item.id,
+        )
+    return strings.laftel_schedule_entry_msg.format(
+        name=_escape_markdown(item.name or ""),
+        genres=genres,
+        rating=rating,
+        tags=tags_str,
+        item_id=item.id,
+    )
+
+
 class LaftelService:
     def __init__(self, bot):
         self.bot = bot
@@ -216,28 +248,7 @@ class LaftelService:
             return strings.laftel_schedule_empty_msg.format(day_name)
 
         header = strings.laftel_schedule_header_msg.format(day_name)
-        entries = []
-        for item in items:
-            genres = _escape_markdown(", ".join(item.genres))
-            rating = RATING_LABELS.get(item.content_rating, item.content_rating)
-
-            tags = []
-            if item.is_laftel_only or item.is_exclusive:
-                tags.append("[독점]")
-            if item.is_dubbed:
-                tags.append("[더빙]")
-            if item.is_ending:
-                tags.append("[완결]")
-            tags_str = _escape_markdown(" ".join(tags))
-
-            entry = strings.laftel_schedule_entry_msg.format(
-                name=_escape_markdown(item.name),
-                genres=genres,
-                rating=rating,
-                tags=tags_str,
-                item_id=item.id,
-            )
-            entries.append(entry)
+        entries = [_format_entry(item) for item in items]
 
         footer = strings.laftel_schedule_footer_msg.format(len(items))
         text = header + "".join(entries) + footer
@@ -286,29 +297,7 @@ class LaftelService:
             return strings.laftel_ranking_empty_msg
 
         header = strings.laftel_ranking_header_msg.format(type_label)
-        entries = []
-        for rank, item in enumerate(items, 1):
-            genres = _escape_markdown(", ".join(item.genres))
-            rating = RATING_LABELS.get(item.content_rating, item.content_rating)
-
-            tags = []
-            if item.is_laftel_only or item.is_exclusive:
-                tags.append("[독점]")
-            if item.is_dubbed:
-                tags.append("[더빙]")
-            if item.is_ending:
-                tags.append("[완결]")
-            tags_str = _escape_markdown(" ".join(tags))
-
-            entry = strings.laftel_ranking_entry_msg.format(
-                rank=rank,
-                name=_escape_markdown(item.name),
-                genres=genres,
-                rating=rating,
-                tags=tags_str,
-                item_id=item.id,
-            )
-            entries.append(entry)
+        entries = [_format_entry(item, rank=rank) for rank, item in enumerate(items, 1)]
 
         footer = strings.laftel_ranking_footer_msg.format(len(items))
         text = header + "".join(entries) + footer
@@ -335,6 +324,15 @@ class LaftelService:
         )
         return keyboard
 
+    @staticmethod
+    def _build_search_result_keyboard():
+        keyboard = telebot.types.InlineKeyboardMarkup()
+        keyboard.row(
+            telebot.types.InlineKeyboardButton(strings.laftel_search_again_btn, callback_data="laftel_menu:search"),
+            telebot.types.InlineKeyboardButton(strings.laftel_portal_btn, callback_data="laftel_menu:portal"),
+        )
+        return keyboard
+
     # --- 검색 ---
 
     def handle_search_reply(self, message):
@@ -348,8 +346,11 @@ class LaftelService:
             return
         self._pending_search = None
         keyword = message.text.strip()
+        if not keyword:
+            self.bot.reply_to(message, strings.laftel_search_empty_input_msg)
+            return
         result = self._search(keyword)
-        self.bot.reply_to(message, result, parse_mode="Markdown")
+        self.bot.reply_to(message, result, parse_mode="Markdown", reply_markup=self._build_search_result_keyboard())
 
     def _search(self, keyword):
         try:
@@ -365,29 +366,7 @@ class LaftelService:
             return strings.laftel_search_empty_msg.format(_escape_markdown(keyword))
 
         header = strings.laftel_search_header_msg.format(_escape_markdown(keyword))
-        entries = []
-        for rank, item in enumerate(items, 1):
-            genres = _escape_markdown(", ".join(item.genres))
-            rating = RATING_LABELS.get(item.content_rating, item.content_rating)
-
-            tags = []
-            if item.is_laftel_only or item.is_exclusive:
-                tags.append("[독점]")
-            if item.is_dubbed:
-                tags.append("[더빙]")
-            if item.is_ending:
-                tags.append("[완결]")
-            tags_str = _escape_markdown(" ".join(tags))
-
-            entry = strings.laftel_ranking_entry_msg.format(
-                rank=rank,
-                name=_escape_markdown(item.name),
-                genres=genres,
-                rating=rating,
-                tags=tags_str,
-                item_id=item.id,
-            )
-            entries.append(entry)
+        entries = [_format_entry(item, rank=rank) for rank, item in enumerate(items, 1)]
 
         footer = strings.laftel_search_footer_msg.format(len(items))
         text = header + "".join(entries) + footer

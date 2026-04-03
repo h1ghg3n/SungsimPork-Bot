@@ -226,6 +226,9 @@ laftel_search_input_msg = "검색할 키워드를 입력해 주세요."
 laftel_search_header_msg = '*"{}" 검색 결과*\n\n'
 laftel_search_empty_msg = '"{}"에 대한 검색 결과가 없습니다.'
 laftel_search_footer_msg = "_(총 {}개)_"
+laftel_search_empty_input_msg = "검색할 키워드를 입력해 주세요."
+laftel_search_again_btn = "다시 검색"
+laftel_portal_btn = "포털로"
 laftel_help_msg = "/laftel 명령어로 라프텔 편성표, 랭킹, 검색 기능을 이용할 수 있습니다."
 
 # Resources
