@@ -82,7 +82,7 @@ class LaftelAnime(BaseModel):
     name: str = ""
     genres: list[str] = []
     content_rating: str = ""
-    distributed_air_time: str = ""
+    distributed_air_time: str | None = ""
     is_ending: bool = False
     is_laftel_only: bool = False
     is_exclusive: bool = False

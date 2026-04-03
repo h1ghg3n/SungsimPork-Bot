@@ -197,7 +197,7 @@ class LaftelService:
             anime_list = TypeAdapter(list[LaftelAnime]).validate_json(response.content)
             grouped = {}
             for item in anime_list:
-                day = item.distributed_air_time
+                day = item.distributed_air_time or ""
                 if day not in grouped:
                     grouped[day] = []
                 grouped[day].append(item)
