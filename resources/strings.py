@@ -221,7 +221,12 @@ laftel_ranking_entry_msg = (
 )
 laftel_ranking_empty_msg = "랭킹 정보를 가져올 수 없습니다."
 laftel_ranking_footer_msg = "_(총 {}개)_"
-laftel_help_msg = "/laftel 명령어로 라프텔 애니 편성표와 랭킹을 확인할 수 있습니다."
+laftel_search_btn = "검색"
+laftel_search_input_msg = "검색할 키워드를 입력해 주세요."
+laftel_search_header_msg = '*"{}" 검색 결과*\n\n'
+laftel_search_empty_msg = '"{}"에 대한 검색 결과가 없습니다.'
+laftel_search_footer_msg = "_(총 {}개)_"
+laftel_help_msg = "/laftel 명령어로 라프텔 편성표, 랭킹, 검색 기능을 이용할 수 있습니다."
 
 # Resources
 

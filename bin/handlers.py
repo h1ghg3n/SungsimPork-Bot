@@ -184,6 +184,13 @@ def register_handlers(bot, hub, logger):
     def handle_prompt_reply(message):
         hub.handle_prompt_reply(message)
 
+    # ForceReply handler for Laftel search
+    @bot.message_handler(
+        func=lambda m: m.reply_to_message and m.reply_to_message.text == strings.laftel_search_input_msg
+    )
+    def handle_laftel_search_reply(message):
+        hub.laftel.handle_search_reply(message)
+
     # Ordinary message
     @bot.message_handler(content_types=["text"])
     @safe_handler

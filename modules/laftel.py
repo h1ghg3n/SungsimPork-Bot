@@ -1,11 +1,13 @@
 import datetime
+import time
+import urllib.parse
 
 import requests
 import telebot
 from pydantic import TypeAdapter
 
 from modules import log
-from modules.api_models import LaftelAnime
+from modules.api_models import LaftelAnime, LaftelSearchResponse
 from resources import strings
 
 logger = log.Logger()
@@ -14,6 +16,7 @@ LAFTEL_BASE_URL = "https://laftel.net/api/"
 LAFTEL_HEADERS = {"laftel": "TeJava"}
 CACHE_INTERVAL = 3600
 MAX_MESSAGE_LENGTH = 4096
+SEARCH_INPUT_TIMEOUT = 300
 
 SETTINGS_MODULE_PATH = "modules.laftel"
 
@@ -60,6 +63,7 @@ class LaftelService:
         self._last_fetch_time = None
         self._ranking_cache = {}
         self._ranking_fetch_time = {}
+        self._pending_search = None
 
     # --- 콜백 라우팅 ---
 
@@ -103,6 +107,14 @@ class LaftelService:
                 call.message.message_id,
                 parse_mode="Markdown",
                 reply_markup=self._build_ranking_type_keyboard(),
+            )
+        elif value == "search":
+            self._pending_search = (call.from_user.id, call.message.chat.id, time.time())
+            self.bot.edit_message_reply_markup(call.message.chat.id, call.message.message_id, reply_markup=None)
+            self.bot.send_message(
+                call.message.chat.id,
+                strings.laftel_search_input_msg,
+                reply_markup=telebot.types.ForceReply(selective=True),
             )
 
     def _handle_schedule(self, call, value):
@@ -150,6 +162,9 @@ class LaftelService:
         keyboard.row(
             telebot.types.InlineKeyboardButton(strings.laftel_schedule_btn, callback_data="laftel_menu:schedule"),
             telebot.types.InlineKeyboardButton(strings.laftel_ranking_btn, callback_data="laftel_menu:ranking"),
+        )
+        keyboard.row(
+            telebot.types.InlineKeyboardButton(strings.laftel_search_btn, callback_data="laftel_menu:search"),
         )
         return keyboard
 
@@ -319,3 +334,71 @@ class LaftelService:
             ]
         )
         return keyboard
+
+    # --- 검색 ---
+
+    def handle_search_reply(self, message):
+        if not self._pending_search:
+            return
+        user_id, chat_id, timestamp = self._pending_search
+        if message.from_user.id != user_id or message.chat.id != chat_id:
+            return
+        if time.time() - timestamp > SEARCH_INPUT_TIMEOUT:
+            self._pending_search = None
+            return
+        self._pending_search = None
+        keyword = message.text.strip()
+        result = self._search(keyword)
+        self.bot.reply_to(message, result, parse_mode="Markdown")
+
+    def _search(self, keyword):
+        try:
+            url = LAFTEL_BASE_URL + "search/v3/keyword/?" + urllib.parse.urlencode({"keyword": keyword})
+            response = requests.get(url, headers=LAFTEL_HEADERS, timeout=10)
+            parsed = LaftelSearchResponse.model_validate_json(response.content)
+        except Exception:
+            logger.log_error(f"Failed to search Laftel (keyword={keyword}).")
+            return strings.laftel_error_msg
+
+        items = parsed.results
+        if not items:
+            return strings.laftel_search_empty_msg.format(_escape_markdown(keyword))
+
+        header = strings.laftel_search_header_msg.format(_escape_markdown(keyword))
+        entries = []
+        for rank, item in enumerate(items, 1):
+            genres = _escape_markdown(", ".join(item.genres))
+            rating = RATING_LABELS.get(item.content_rating, item.content_rating)
+
+            tags = []
+            if item.is_laftel_only or item.is_exclusive:
+                tags.append("[독점]")
+            if item.is_dubbed:
+                tags.append("[더빙]")
+            if item.is_ending:
+                tags.append("[완결]")
+            tags_str = _escape_markdown(" ".join(tags))
+
+            entry = strings.laftel_ranking_entry_msg.format(
+                rank=rank,
+                name=_escape_markdown(item.name),
+                genres=genres,
+                rating=rating,
+                tags=tags_str,
+                item_id=item.id,
+            )
+            entries.append(entry)
+
+        footer = strings.laftel_search_footer_msg.format(len(items))
+        text = header + "".join(entries) + footer
+
+        if len(text) > MAX_MESSAGE_LENGTH:
+            truncated = header
+            for entry in entries:
+                remaining = len(footer) + len(strings.laftel_schedule_truncated_msg)
+                if len(truncated) + len(entry) + remaining > MAX_MESSAGE_LENGTH:
+                    break
+                truncated += entry
+            text = truncated + strings.laftel_schedule_truncated_msg + "\n" + footer
+
+        return text

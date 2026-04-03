@@ -72,7 +72,7 @@ class WeatherResponse(BaseModel):
     main: WeatherMain
 
 
-# --- Laftel 편성표 ---
+# --- Laftel ---
 
 
 class LaftelAnime(BaseModel):
@@ -87,3 +87,10 @@ class LaftelAnime(BaseModel):
     is_laftel_only: bool = False
     is_exclusive: bool = False
     is_dubbed: bool = False
+
+
+class LaftelSearchResponse(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    count: int = 0
+    results: list[LaftelAnime] = []

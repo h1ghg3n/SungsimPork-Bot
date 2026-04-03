@@ -1,4 +1,5 @@
 import datetime
+import time
 from unittest.mock import MagicMock, patch
 
 from modules.api_models import LaftelAnime
@@ -38,6 +39,7 @@ def _make_service(**overrides):
         svc._last_fetch_time = None
         svc._ranking_cache = {}
         svc._ranking_fetch_time = {}
+        svc._pending_search = None
         for k, v in overrides.items():
             setattr(svc, k, v)
         return svc
@@ -403,3 +405,120 @@ class TestBuildRankingKeyboard:
         keyboard = LaftelService._build_portal_keyboard()
         buttons = [btn for row in keyboard.keyboard for btn in row]
         assert any(btn.callback_data == "laftel_menu:ranking" for btn in buttons)
+
+    def test_portal_has_search_button(self):
+        keyboard = LaftelService._build_portal_keyboard()
+        buttons = [btn for row in keyboard.keyboard for btn in row]
+        assert any(btn.callback_data == "laftel_menu:search" for btn in buttons)
+
+
+class TestSearch:
+    @patch("modules.laftel.requests.get")
+    def test_search_returns_results(self, mock_get):
+        import json
+
+        sample = {
+            "count": 1,
+            "results": [{"id": 1, "name": "테스트 애니", "genres": ["액션"], "content_rating": "15세 이용가"}],
+        }
+        response = MagicMock()
+        response.content = json.dumps(sample).encode()
+        mock_get.return_value = response
+
+        svc = _make_service()
+        result = svc._search("테스트")
+
+        assert "테스트 애니" in result
+        assert "1." in result
+        assert "총 1개" in result
+
+    @patch("modules.laftel.requests.get")
+    def test_search_empty_result(self, mock_get):
+        import json
+
+        response = MagicMock()
+        response.content = json.dumps({"count": 0, "results": []}).encode()
+        mock_get.return_value = response
+
+        svc = _make_service()
+        result = svc._search("존재하지않는키워드")
+
+        assert strings.laftel_search_empty_msg.format("존재하지않는키워드") == result
+
+    @patch("modules.laftel.requests.get")
+    def test_search_api_failure(self, mock_get):
+        mock_get.side_effect = Exception("connection error")
+
+        svc = _make_service()
+        result = svc._search("테스트")
+
+        assert result == strings.laftel_error_msg
+
+
+class TestHandleSearchReply:
+    def test_valid_reply_triggers_search(self):
+        svc = _make_service()
+        svc._search = MagicMock(return_value="검색 결과")
+        svc._pending_search = (1, 1, time.time())
+
+        msg = MagicMock()
+        msg.from_user.id = 1
+        msg.chat.id = 1
+        msg.text = "프리렌"
+
+        svc.handle_search_reply(msg)
+
+        svc._search.assert_called_once_with("프리렌")
+        svc.bot.reply_to.assert_called_once()
+
+    def test_no_pending_search_ignored(self):
+        svc = _make_service()
+
+        msg = MagicMock()
+        msg.from_user.id = 1
+        msg.chat.id = 1
+        msg.text = "프리렌"
+
+        svc.handle_search_reply(msg)
+        svc.bot.reply_to.assert_not_called()
+
+    def test_wrong_user_ignored(self):
+        svc = _make_service()
+        svc._pending_search = (1, 1, time.time())
+
+        msg = MagicMock()
+        msg.from_user.id = 999
+        msg.chat.id = 1
+        msg.text = "프리렌"
+
+        svc.handle_search_reply(msg)
+        svc.bot.reply_to.assert_not_called()
+
+    def test_expired_search_ignored(self):
+        svc = _make_service()
+        svc._pending_search = (1, 1, time.time() - 600)
+
+        msg = MagicMock()
+        msg.from_user.id = 1
+        msg.chat.id = 1
+        msg.text = "프리렌"
+
+        svc.handle_search_reply(msg)
+        svc.bot.reply_to.assert_not_called()
+        assert svc._pending_search is None
+
+    def test_menu_search_sends_force_reply(self):
+        svc = _make_service()
+
+        call = MagicMock()
+        call.data = "laftel_menu:search"
+        call.from_user.id = 1
+        call.message.chat.id = 1
+        call.message.message_id = 1
+
+        svc.handle_laftel_callback(call)
+
+        svc.bot.send_message.assert_called_once()
+        args = svc.bot.send_message.call_args
+        assert args[0][1] == strings.laftel_search_input_msg
+        assert svc._pending_search is not None
