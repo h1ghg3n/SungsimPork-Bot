@@ -8,6 +8,7 @@ from modules import log
 from modules.admin import AdminManager
 from modules.calculator import Calculator
 from modules.gemini_chat import GeminiChat
+from modules.laftel import LaftelService
 from modules.random_based import RandomBasedFeatures
 from modules.utils import strip_html_tags
 from modules.web_based import WebManager
@@ -17,11 +18,13 @@ logger = log.Logger()
 
 
 class BotFeaturesHub:
-    CALLBACK_PREFIXES = AdminManager.CALLBACK_PREFIXES
-
     @staticmethod
     def is_admin_callback(data):
         return AdminManager.is_admin_callback(data)
+
+    @staticmethod
+    def is_laftel_callback(data):
+        return LaftelService.is_laftel_callback(data)
 
     # init
     def __init__(self, bot):
@@ -32,6 +35,7 @@ class BotFeaturesHub:
         self.calculator = Calculator()
         self.gemini_chat = GeminiChat()
         self.admin = AdminManager(bot, self.gemini_chat)
+        self.laftel = LaftelService(bot)
 
     # --- Admin delegation ---
 
@@ -41,6 +45,9 @@ class BotFeaturesHub:
 
     def handle_admin_callback(self, call):
         self.admin.handle_admin_callback(call)
+
+    def handle_laftel_callback(self, call):
+        self.laftel.handle_laftel_callback(call)
 
     def allow_chat_handler(self, message):
         self.admin.allow_chat_handler(message)
@@ -61,7 +68,7 @@ class BotFeaturesHub:
         self.web_manager.update_suon()
         provided_suon = self.web_manager.provide_suon_v2()
 
-        if provided_suon == "점검중":
+        if provided_suon == strings.suon_maintenance_status:
             return strings.suon_unavailable_msg
         return strings.suon_result_msg.format(provided_suon)
 
@@ -103,9 +110,9 @@ class BotFeaturesHub:
             result = self.web_manager.daum_search(message, None)
             result_contents = ""
 
-            for doc in result["documents"][:5]:
-                link = f"[{strings.search_more_link_msg}]({doc['url']})"
-                result_contents += strip_html_tags(f"*{doc['title']}*\n{doc['contents']}\n{link}\n\n")
+            for doc in result.documents[:5]:
+                link = f"[{strings.search_more_link_msg}]({doc.url})"
+                result_contents += strip_html_tags(f"*{doc.title}*\n{doc.contents}\n{link}\n\n")
             text = strings.search_result_header_msg + strip_html_tags(result_contents)
             self.bot.reply_to(message, text, parse_mode="Markdown")
         except Exception:
