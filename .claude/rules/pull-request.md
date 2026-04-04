@@ -43,3 +43,4 @@
 
 - 기술 용어(rate limit, thread safety, inline keyboard 등)는 무리하게 한국어로 번역하지 않음
 - PR 생성 전 반드시 초안을 사용자에게 보여주고 승인받을 것
+- **PR merge 후 브랜치 삭제 금지** — `development`, `master` 등 주요 브랜치는 물론 작업 브랜치도 merge 후 삭제하지 않음

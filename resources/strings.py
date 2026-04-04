@@ -214,7 +214,22 @@ laftel_schedule_empty_msg = "{}에 편성된 신작이 없습니다."
 laftel_error_msg = "라프텔 정보를 가져오는 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요."
 laftel_schedule_footer_msg = "_(총 {}개)_"
 laftel_schedule_truncated_msg = "... 더 많은 작품은 laftel.net에서 확인해 주세요."
-laftel_help_msg = "/laftel 명령어로 라프텔 애니 편성표를 확인할 수 있습니다."
+laftel_ranking_btn = "랭킹"
+laftel_ranking_header_msg = "*{} 랭킹 Top 20*\n\n"
+laftel_ranking_entry_msg = (
+    "{rank}. *{name}*  {rating}\n   {genres} {tags}\n   [보기](https://laftel.net/item/{item_id})\n\n"
+)
+laftel_ranking_empty_msg = "랭킹 정보를 가져올 수 없습니다."
+laftel_ranking_footer_msg = "_(총 {}개)_"
+laftel_search_btn = "검색"
+laftel_search_input_msg = "검색할 키워드를 입력해 주세요."
+laftel_search_header_msg = '*"{}" 검색 결과*\n\n'
+laftel_search_empty_msg = '"{}"에 대한 검색 결과가 없습니다.'
+laftel_search_footer_msg = "_(총 {}개)_"
+laftel_search_empty_input_msg = "검색할 키워드를 입력해 주세요."
+laftel_search_again_btn = "다시 검색"
+laftel_portal_btn = "포털로"
+laftel_help_msg = "/laftel 명령어로 라프텔 편성표, 랭킹, 검색 기능을 이용할 수 있습니다."
 
 # Resources
 
