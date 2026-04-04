@@ -507,6 +507,31 @@ class TestHandleSearchReply:
         svc.bot.reply_to.assert_not_called()
         assert svc._pending_search is None
 
+    def test_empty_keyword_sends_guidance(self):
+        svc = _make_service()
+        svc._pending_search = (1, 1, time.time())
+
+        msg = MagicMock()
+        msg.from_user.id = 1
+        msg.chat.id = 1
+        msg.text = "   "
+
+        svc.handle_search_reply(msg)
+
+        svc.bot.reply_to.assert_called_once_with(msg, strings.laftel_search_empty_input_msg)
+
+    def test_wrong_chat_ignored(self):
+        svc = _make_service()
+        svc._pending_search = (1, 1, time.time())
+
+        msg = MagicMock()
+        msg.from_user.id = 1
+        msg.chat.id = 999
+        msg.text = "프리렌"
+
+        svc.handle_search_reply(msg)
+        svc.bot.reply_to.assert_not_called()
+
     def test_menu_search_sends_force_reply(self):
         svc = _make_service()
 
@@ -522,3 +547,85 @@ class TestHandleSearchReply:
         args = svc.bot.send_message.call_args
         assert args[0][1] == strings.laftel_search_input_msg
         assert svc._pending_search is not None
+
+
+class TestFormatEntry:
+    def test_with_null_fields(self):
+        from modules.laftel import _format_entry
+
+        item = LaftelAnime(id=1, name=None, genres=None, content_rating=None, is_ending=None)
+        result = _format_entry(item)
+        assert "laftel.net/item/1" in result
+
+    def test_with_rank(self):
+        from modules.laftel import _format_entry
+
+        item = LaftelAnime(id=1, name="테스트", genres=["액션"], content_rating="15세 이용가")
+        result = _format_entry(item, rank=3)
+        assert "3." in result
+        assert "테스트" in result
+
+    def test_without_rank(self):
+        from modules.laftel import _format_entry
+
+        item = LaftelAnime(id=1, name="테스트", genres=["액션"], content_rating="15세 이용가")
+        result = _format_entry(item)
+        assert "테스트" in result
+        assert "1." not in result
+
+
+class TestEdgeCases:
+    def test_invalid_schedule_day_code_ignored(self):
+        svc = _make_service()
+        call = MagicMock()
+        call.data = "laftel_schedule:invalid"
+        call.message.chat.id = 1
+        call.message.message_id = 1
+
+        svc.handle_laftel_callback(call)
+        svc.bot.edit_message_text.assert_not_called()
+
+    def test_invalid_ranking_type_ignored(self):
+        svc = _make_service()
+        call = MagicMock()
+        call.data = "laftel_ranking:invalid"
+        call.message.chat.id = 1
+        call.message.message_id = 1
+
+        svc.handle_laftel_callback(call)
+        svc.bot.edit_message_text.assert_not_called()
+
+    def test_laftel_ranking_callback_detected(self):
+        assert LaftelService.is_laftel_callback("laftel_ranking:week") is True
+        assert LaftelService.is_laftel_callback("laftel_ranking:quarter") is True
+
+    def test_search_result_keyboard_has_buttons(self):
+        keyboard = LaftelService._build_search_result_keyboard()
+        buttons = [btn for row in keyboard.keyboard for btn in row]
+        callback_data_set = {btn.callback_data for btn in buttons}
+        assert "laftel_menu:search" in callback_data_set
+        assert "laftel_menu:portal" in callback_data_set
+        assert len(buttons) == 2
+
+    @patch("modules.laftel.requests.get")
+    def test_search_truncation_on_many_results(self, mock_get):
+        import json
+
+        results = [
+            {
+                "id": i,
+                "name": f"매우 긴 제목의 애니메이션 작품 {i}",
+                "genres": ["장르A", "장르B"],
+                "content_rating": "15세 이용가",
+            }
+            for i in range(100)
+        ]
+        response = MagicMock()
+        response.content = json.dumps({"count": 100, "results": results}).encode()
+        mock_get.return_value = response
+
+        svc = _make_service()
+        result = svc._search("테스트")
+
+        assert len(result) <= 4096
+        assert strings.laftel_schedule_truncated_msg in result
