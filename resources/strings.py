@@ -231,6 +231,10 @@ laftel_search_again_btn = "다시 검색"
 laftel_portal_btn = "포털로"
 laftel_help_msg = "/laftel 명령어로 라프텔 편성표, 랭킹, 검색 기능을 이용할 수 있습니다."
 
+# RSS feed translater message
+bfrss_help_msg = "번역된 rss를 보여줍니다. 주기는 오전 9시(딜레이 약 2분)에 갱신됩니다."
+bfrss_error_msg = "번역 서버에 연결할 수 없습니다."
+
 # Resources
 
 # Customized keyboards (inline)
