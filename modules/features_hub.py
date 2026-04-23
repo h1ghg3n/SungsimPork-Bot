@@ -194,8 +194,8 @@ class BotFeaturesHub:
 
     # RSS JSON request
     def rss_handler(self, message):
-       text, parse_mode = self.web_manager.rss_handler(message)
-       self.bot.reply_to(message, text, parse_mode=parse_mode)
+        text, parse_mode = self.web_manager.rss_handler(message)
+        self.bot.reply_to(message, text, parse_mode=parse_mode)
 
     # Clear chat
     def clear_chat_handler(self, message):

@@ -145,7 +145,7 @@ class WebManager:
             res = requests.get(config.RSSF_URL, params={"token": config.RSSF_TOKEN}, timeout=10)
             data = res.json()
             text = f" HACKER NEWS ({data['date'][4:6]}월 {data['date'][6:]}일)\n\n"
-            text += "\n".join(f"• <a href=\"{e['link']}\">{e['title']}</a>" for e in data['entries'])
+            text += "\n".join(f'• <a href="{e["link"]}">{e["title"]}</a>' for e in data["entries"])
             return text, "HTML"
         except Exception as e:
             logger.log_error(f"rss_handler failed: {e}")

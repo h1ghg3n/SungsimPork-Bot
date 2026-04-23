@@ -200,7 +200,6 @@ def register_handlers(bot, hub, logger):
     def handle_laftel_search_reply(message):
         hub.laftel.handle_search_reply(message)
 
-
     # Ordinary message
     @bot.message_handler(content_types=["text"])
     @safe_handler
