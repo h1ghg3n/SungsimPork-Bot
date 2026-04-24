@@ -148,8 +148,7 @@ class WebManager:
             data = RssfResponse.model_validate_json(res.text)
             text = f" HACKER NEWS ({data.date[4:6]}??{data.date[6:]}??\n\n"
             text += "\n".join(
-                f'??<a href="{html.escape(e.link, quote=True)}">{html.escape(e.title)}</a>'
-                for e in data.entries
+                f'??<a href="{html.escape(e.link, quote=True)}">{html.escape(e.title)}</a>' for e in data.entries
             )
             return text, "HTML"
         except Exception as e:
