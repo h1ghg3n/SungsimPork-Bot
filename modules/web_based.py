@@ -146,10 +146,11 @@ class WebManager:
         try:
             res = requests.get(config.RSSF_URL, params={"token": config.RSSF_TOKEN}, timeout=10)
             data = RssfResponse.model_validate_json(res.text)
-            text = f" HACKER NEWS ({data.date[4:6]}월 {data.date[6:]}일)\n\n"
+            hour = data.hour if data.hour is not None else datetime.datetime.now().hour
+            ampm = "오전" if hour < 12 else "오후"
+            text = f" HACKER NEWS ({data.date[4:6]}월 {data.date[6:]}일 {ampm})\n\n"
             text += "\n".join(
-                f'• <a href="{html.escape(e.link, quote=True)}">{html.escape(e.title)}</a>'
-                for e in data.entries
+                f'• <a href="{html.escape(e.link, quote=True)}">{html.escape(e.title)}</a>' for e in data.entries
             )
             return text, "HTML"
         except Exception as e:

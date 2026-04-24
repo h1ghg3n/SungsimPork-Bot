@@ -278,13 +278,16 @@ class TestRssHandler:
     @patch("modules.web_based.requests.get")
     def test_success(self, mock_get):
         response = MagicMock()
-        response.text = json.dumps({
-            "date": "20260424",
-            "entries": [
-                {"title": "Test Article", "link": "https://example.com"},
-                {"title": "Article with <special> &chars", "link": "https://example.com/path?a=1&b=2"},
-            ],
-        })
+        response.text = json.dumps(
+            {
+                "date": "20260424",
+                "hour": 9,
+                "entries": [
+                    {"title": "Test Article", "link": "https://example.com"},
+                    {"title": "Article with <special> &chars", "link": "https://example.com/path?a=1&b=2"},
+                ],
+            }
+        )
         mock_get.return_value = response
 
         with patch.object(WebManager, "__init__", lambda self: None):
