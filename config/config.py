@@ -30,7 +30,7 @@ GEMINI_RATE_LIMIT = _int_env("GEMINI_RATE_LIMIT", 5)
 GEMINI_API_TIMEOUT = _int_env("GEMINI_API_TIMEOUT", 60)
 ADMIN_USER_ID = _int_env("ADMIN_USER_ID", 0)
 
-# External AI Engine API & endpoints
+# RSS feed translator API
 RSSF_TOKEN = os.getenv("RSSF_TOKEN", "")
 RSSF_URL = os.getenv("RSSF_URL", "")
 
