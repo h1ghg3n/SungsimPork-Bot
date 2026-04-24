@@ -94,3 +94,18 @@ class LaftelSearchResponse(BaseModel):
 
     count: int = 0
     results: list[LaftelAnime] = []
+
+
+# --- RSS Feed (FastAPI) ---
+
+
+class RssfEntry(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    title: str = ""
+    link: str = ""
+
+
+class RssfResponse(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    date: str = ""
+    entries: list[RssfEntry] = []
