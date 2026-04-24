@@ -270,3 +270,40 @@ class TestProvideSuonV2:
             wm = WebManager()
             wm.suon_v2 = "23.5"
             assert wm.provide_suon_v2() == "23.5"
+
+
+class TestRssHandler:
+    @patch("modules.web_based.config.RSSF_URL", "http://test-server/hn")
+    @patch("modules.web_based.config.RSSF_TOKEN", "test_token")
+    @patch("modules.web_based.requests.get")
+    def test_success(self, mock_get):
+        response = MagicMock()
+        response.text = json.dumps({
+            "date": "20260424",
+            "entries": [
+                {"title": "Test Article", "link": "https://example.com"},
+                {"title": "Article with <special> &chars", "link": "https://example.com/path?a=1&b=2"},
+            ],
+        })
+        mock_get.return_value = response
+
+        with patch.object(WebManager, "__init__", lambda self: None):
+            wm = WebManager()
+            text, parse_mode = wm.rss_handler(MagicMock())
+            assert parse_mode == "HTML"
+            assert "HACKER NEWS" in text
+            assert "Test Article" in text
+            assert "&lt;special&gt;" in text
+            assert "&amp;chars" in text
+
+    @patch("modules.web_based.config.RSSF_URL", "http://test-server/hn")
+    @patch("modules.web_based.config.RSSF_TOKEN", "test_token")
+    @patch("modules.web_based.requests.get")
+    def test_server_failure(self, mock_get):
+        mock_get.side_effect = Exception("connection error")
+
+        with patch.object(WebManager, "__init__", lambda self: None):
+            wm = WebManager()
+            text, parse_mode = wm.rss_handler(MagicMock())
+            assert text == strings.bfrss_error_msg
+            assert parse_mode is None
