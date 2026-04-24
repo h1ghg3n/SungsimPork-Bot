@@ -1,4 +1,5 @@
 import datetime
+import html
 import urllib.parse
 
 import requests
@@ -9,6 +10,7 @@ from modules.api_models import (
     HangangWaterResponse,
     KakaoAddressResponse,
     KakaoSearchResponse,
+    RssfResponse,
     WeatherResponse,
 )
 from modules.utils import extract_command_args, strip_html_tags
@@ -143,10 +145,13 @@ class WebManager:
     def rss_handler(self, message):
         try:
             res = requests.get(config.RSSF_URL, params={"token": config.RSSF_TOKEN}, timeout=10)
-            data = res.json()
-            text = f" HACKER NEWS ({data['date'][4:6]}월 {data['date'][6:]}일)\n\n"
-            text += "\n".join(f'• <a href="{e["link"]}">{e["title"]}</a>' for e in data["entries"])
+            data = RssfResponse.model_validate_json(res.text)
+            text = f" HACKER NEWS ({data.date[4:6]}월 {data.date[6:]}일)\n\n"
+            text += "\n".join(
+                f'• <a href="{html.escape(e.link, quote=True)}">{html.escape(e.title)}</a>'
+                for e in data.entries
+            )
             return text, "HTML"
         except Exception as e:
             logger.log_error(f"rss_handler failed: {e}")
-            return strings.rss_error_msg, None
+            return strings.bfrss_error_msg, None
