@@ -179,7 +179,6 @@ def register_handlers(bot, hub, logger):
     @bot.message_handler(commands=["bfrss"])
     @safe_handler
     def handle_bfrss(message):
-        print(f"[DEBUG] /bfrss called by {message.chat.id}", flush=True)
         hub.rss_handler(message)
 
     # Location
