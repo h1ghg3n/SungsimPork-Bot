@@ -297,6 +297,8 @@ class TestRssHandler:
             assert "Test Article" in text
             assert "&lt;special&gt;" in text
             assert "&amp;chars" in text
+            assert "04월 24일" in text
+            assert "•" in text
 
     @patch("modules.web_based.config.RSSF_URL", "http://test-server/hn")
     @patch("modules.web_based.config.RSSF_TOKEN", "test_token")
