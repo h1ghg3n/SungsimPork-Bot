@@ -21,6 +21,10 @@ BOT_INTERVAL = 3
 BOT_TIMEOUT = 30
 CLEANUP_INTERVAL = 600
 
+telebot.apihelper.RETRY_ON_ERROR = True
+telebot.apihelper.CONNECT_TIMEOUT = 10
+telebot.apihelper.READ_TIMEOUT = 30
+
 # Validate required environment variables
 config.validate()
 
@@ -34,7 +38,10 @@ hub = BotFeaturesHub(bot)
 logger = log.Logger()
 
 # Register commands and handlers
-register_commands(bot)
+try:
+    register_commands(bot)
+except Exception as e:
+    print(f"register_commands failed at startup: {e}", flush=True)
 register_handlers(bot, hub, logger)
 
 shutdown_event = threading.Event()
