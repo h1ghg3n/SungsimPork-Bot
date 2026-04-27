@@ -15,6 +15,7 @@ QUERY_STRINGS = {
     "search": strings.search_help_msg,
     "namu": strings.namu_help_msg,
     "laftel": strings.laftel_help_msg,
+    "bfrss": strings.bfrss_help_msg,
 }
 
 
@@ -37,6 +38,7 @@ def register_commands(bot):
             telebot.types.BotCommand("myid", "내 사용자 ID 확인"),
             telebot.types.BotCommand("ping", "봇 상태 확인"),
             telebot.types.BotCommand("laftel", "라프텔 애니 정보"),
+            telebot.types.BotCommand("bfrss", "해외 rss 번역수신"),
         ]
     )
 
@@ -180,6 +182,12 @@ def register_handlers(bot, hub, logger):
     @safe_handler
     def handle_dday(message):
         hub.d_day(message)
+
+    # Send translated RSS feed to FASTAPI server
+    @bot.message_handler(commands=["bfrss"])
+    @safe_handler
+    def handle_bfrss(message):
+        hub.rss_handler(message)
 
     # Location
     @bot.message_handler(content_types=["location"])

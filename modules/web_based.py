@@ -1,4 +1,5 @@
 import datetime
+import html
 import urllib.parse
 
 import requests
@@ -9,6 +10,7 @@ from modules.api_models import (
     HangangWaterResponse,
     KakaoAddressResponse,
     KakaoSearchResponse,
+    RssfResponse,
     WeatherResponse,
 )
 from modules.utils import extract_command_args, strip_html_tags
@@ -24,12 +26,12 @@ WEATHER_BASE_URL = "https://api.openweathermap.org/data/2.5/weather?"
 SUON_REFRESH_INTERVAL = 600  # seconds
 
 
-# 강물 온도 조회
+# 媛뺣Ъ ?⑤룄 議고쉶
 class WebManager:
     # init
     def __init__(self):
         self.suon_v2 = None
-        # Records current time and latest update 현재 시간과 마지막 업데이트 시점을 기록
+        # Records current time and latest update ?꾩옱 ?쒓컙怨?留덉?留??낅뜲?댄듃 ?쒖젏??湲곕줉
         self.current_time = datetime.datetime.now()
         self.last_update_time = datetime.datetime(
             self.current_time.year, self.current_time.month, self.current_time.day, self.current_time.hour, 1
@@ -37,12 +39,12 @@ class WebManager:
         if self.current_time.minute == 0:
             self.last_update_time -= datetime.timedelta(hours=1)
 
-        # Initialize current temperature information 현재 온도 정보를 최초 설정
+        # Initialize current temperature information ?꾩옱 ?⑤룄 ?뺣낫瑜?理쒖큹 ?ㅼ젙
         self.update_suon()
 
-    # Update current temperature data 현재 온도 정보를 업데이트
+    # Update current temperature data ?꾩옱 ?⑤룄 ?뺣낫瑜??낅뜲?댄듃
     def update_suon(self):
-        # check recently update temperature info 최근에 업데이트하였는지 확인
+        # check recently update temperature info 理쒓렐???낅뜲?댄듃?섏??붿? ?뺤씤
         self.current_time = datetime.datetime.now()
         interval = (self.current_time - self.last_update_time).total_seconds()
 
@@ -120,8 +122,8 @@ class WebManager:
         weather_data = WeatherResponse.model_validate_json(weather_request.text)
 
         weather = weather_data.weather[0].description
-        temp = str(round(weather_data.main.temp - 273.15)) + "°C"
-        feels_temp = str(round(weather_data.main.feels_like - 273.15)) + "°C"
+        temp = str(round(weather_data.main.temp - 273.15)) + "째C"
+        feels_temp = str(round(weather_data.main.feels_like - 273.15)) + "째C"
         humidity = str(round(weather_data.main.humidity)) + "%"
 
         weather_result = strings.geolocation_weather_msg.format(
@@ -134,8 +136,21 @@ class WebManager:
 
         return geo_location + "\n" + map_location + "\n\n" + weather_result
 
-    # Provide temperature data to other methods (V2, 한강으로 고정)
+    # Provide temperature data to other methods (V2, ?쒓컯?쇰줈 怨좎젙)
     def provide_suon_v2(self):
         if self.suon_v2 is None:
             return strings.suon_maintenance_status
         return self.suon_v2
+
+    def rss_handler(self, message):
+        try:
+            res = requests.get(config.RSSF_URL, params={"token": config.RSSF_TOKEN}, timeout=10)
+            data = RssfResponse.model_validate_json(res.text)
+            text = f" HACKER NEWS ({data.date[4:6]}??{data.date[6:]}??\n\n"
+            text += "\n".join(
+                f'??<a href="{html.escape(e.link, quote=True)}">{html.escape(e.title)}</a>' for e in data.entries
+            )
+            return text, "HTML"
+        except Exception as e:
+            logger.log_error(f"rss_handler failed: {e}")
+            return strings.bfrss_error_msg, None

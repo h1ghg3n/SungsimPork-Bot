@@ -201,6 +201,11 @@ class BotFeaturesHub:
             for plain_chunk in GeminiChat.split_response(text):
                 self.bot.reply_to(message, plain_chunk)
 
+    # RSS JSON request
+    def rss_handler(self, message):
+        text, parse_mode = self.web_manager.rss_handler(message)
+        self.bot.reply_to(message, text, parse_mode=parse_mode)
+
     # Clear chat
     def clear_chat_handler(self, message):
         self.gemini_chat.clear_session(message.chat.id, message.from_user.id)
