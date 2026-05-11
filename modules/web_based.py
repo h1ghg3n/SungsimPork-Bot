@@ -144,7 +144,7 @@ class WebManager:
 
     def rss_handler(self, message, slug="hn", date=""):
         if slug not in strings.bfrss_feed_names:
-            return strings.bfrss_unknown_feed_msg, None
+            return strings.bfrss_unknown_slug_msg, None
         try:
             params = {"token": config.RSSF_TOKEN}
             if date:
